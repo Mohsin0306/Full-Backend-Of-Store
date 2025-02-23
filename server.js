@@ -13,6 +13,10 @@ const auth = require('./middleware/auth');
 const recentRoutes = require('./routes/RecentRoutes');
 const bannerRoutes = require('./routes/bannerRoutes');
 
+// Check Node.js version
+const nodeVersion = process.version;
+console.log(`Node.js Version: ${nodeVersion}`);
+
 const app = express();
 const server = http.createServer(app);
 
@@ -111,10 +115,11 @@ app.use('/api/recent', recentRoutes);
 // Add banner routes
 app.use('/api/banners', bannerRoutes);
 
-// Basic health check route
+// Basic health check route with Node.js version
 app.get('/', (req, res) => {
   res.status(200).json({ 
     status: 'Server is running',
+    nodeVersion: process.version,
     time: new Date().toISOString(),
     environment: process.env.NODE_ENV
   });
@@ -139,16 +144,17 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 
-// Update server listening logic with better logging
+// Update server listening logic
 if (process.env.NODE_ENV !== 'production') {
   server.listen(PORT, () => {
     log(`Server is running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    log(`Node.js Version: ${process.version}`);
     log(`Local: http://localhost:${PORT}`);
-    log(`Network: http://${require('os').networkInterfaces()['eth0']?.[0]?.address || 'localhost'}:${PORT}`);
   });
 } else {
   // In production (Vercel)
   log('Server initialized in production mode');
+  log(`Node.js Version: ${process.version}`);
   module.exports = app;
 }
 
