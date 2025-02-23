@@ -18,11 +18,7 @@ const server = http.createServer(app);
 
 // CORS configuration
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL,
-    'https://pure-full-store.vercel.app',
-    'http://localhost:3000'
-  ],
+  origin: '*',  // For development, update this in production
   credentials: true
 }));
 
@@ -32,8 +28,16 @@ app.use(express.json());
 // Connect to MongoDB
 connectDB();
 
-// Initialize Socket.IO
-initializeSocket(server);
+// Remove file system operations
+// const uploadDir = path.join(__dirname, 'tmp', 'uploads');
+// if (!fs.existsSync(uploadDir)) {
+//   fs.mkdirSync(uploadDir, { recursive: true });
+// }
+
+// Initialize Socket.IO only in development
+if (process.env.NODE_ENV !== 'production') {
+  initializeSocket(server);
+}
 
 // Configure web-push
 webpush.setVapidDetails(
@@ -126,12 +130,12 @@ app.get('/', (req, res) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 
-// Modify server listening for Vercel
+// Update server listening logic
 if (process.env.NODE_ENV !== 'production') {
   server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
+} else {
+  // In production (Vercel), we export the app
+  module.exports = app;
 }
-
-// Export the Express app for Vercel
-module.exports = app;
