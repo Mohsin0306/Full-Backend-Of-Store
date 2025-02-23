@@ -16,6 +16,11 @@ const bannerRoutes = require('./routes/bannerRoutes');
 const app = express();
 const server = http.createServer(app);
 
+// Add a timestamp to console logs
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
 // CORS configuration
 app.use(cors({
   origin: '*',  // For development, update this in production
@@ -25,8 +30,12 @@ app.use(cors({
 // Middleware
 app.use(express.json());
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB with status logging
+connectDB().then(() => {
+  log('MongoDB Connected Successfully');
+}).catch(err => {
+  log('MongoDB Connection Error: ' + err.message);
+});
 
 // Remove file system operations
 // const uploadDir = path.join(__dirname, 'tmp', 'uploads');
@@ -102,40 +111,49 @@ app.use('/api/recent', recentRoutes);
 // Add banner routes
 app.use('/api/banners', bannerRoutes);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Server Error:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method
-  });
-
-  // Send appropriate error response
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+// Basic health check route
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'Server is running',
+    time: new Date().toISOString(),
+    environment: process.env.NODE_ENV
   });
 });
 
-// Basic route with status code
-app.get('/', (req, res) => {
-  res.status(200).json({ 
-    success: true,
-    message: 'Welcome to Perfume Store API' 
+// Add request logging middleware
+app.use((req, res, next) => {
+  log(`${req.method} ${req.path}`);
+  next();
+});
+
+// Error handling middleware with logging
+app.use((err, req, res, next) => {
+  log(`Error: ${err.message}`);
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    error: err.message,
+    timestamp: new Date().toISOString()
   });
 });
 
 // Start server
 const PORT = process.env.PORT || 5000;
 
-// Update server listening logic
+// Update server listening logic with better logging
 if (process.env.NODE_ENV !== 'production') {
   server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    log(`Server is running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    log(`Local: http://localhost:${PORT}`);
+    log(`Network: http://${require('os').networkInterfaces()['eth0']?.[0]?.address || 'localhost'}:${PORT}`);
   });
 } else {
-  // In production (Vercel), we export the app
+  // In production (Vercel)
+  log('Server initialized in production mode');
   module.exports = app;
 }
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  log('Unhandled Promise Rejection: ' + err.message);
+  console.error(err.stack);
+});
