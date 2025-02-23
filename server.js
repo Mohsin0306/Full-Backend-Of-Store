@@ -16,21 +16,18 @@ const bannerRoutes = require('./routes/bannerRoutes');
 const app = express();
 const server = http.createServer(app);
 
-// CORS configuration with specific options
+// CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  origin: [
+    process.env.FRONTEND_URL,
+    'https://pure-full-store.vercel.app',
+    'http://localhost:3000'
+  ],
   credentials: true
 }));
 
 // Middleware
 app.use(express.json());
-
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, 'tmp', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
 
 // Connect to MongoDB
 connectDB();
@@ -129,6 +126,12 @@ app.get('/', (req, res) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Modify server listening for Vercel
+if (process.env.NODE_ENV !== 'production') {
+  server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+// Export the Express app for Vercel
+module.exports = app;
